@@ -34,13 +34,17 @@ public:
     bool checkCollision(const Collider &other) const;
 };
 
-class LineCollider
+class LineCollider : public Collider
 {
 public:
     LineCollider(QPointF& p1, QPointF& p2) : Collider(Line), p1(p1), p2(p2)
         {}
     QPointF& p1;
     QPointF& p2;
+
+// Collider interface
+public:
+    bool checkCollision(const Collider &other) const;
 };
 
 
