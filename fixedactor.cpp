@@ -3,11 +3,11 @@
 FixedActor::FixedActor()
 {}
 
-void FixedActor::explicitUpdate(float)
-{}
+bool FixedActor::explicitUpdate(float)
+    {return true;}
 
-void FixedActor::implicitUpdate(float)
-{}
+bool FixedActor::implicitUpdate(float)
+    {return true;}
 
 void FixedActor::addForce(const QVector2D&)
 {}

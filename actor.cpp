@@ -2,7 +2,7 @@
 
 int Actor::frame = 0;
 
-void Actor::update(float elapsedTime)
+bool Actor::update(float elapsedTime)
 {
     UpdateType updateType = this->updateType;
     if (updateType == LeapFrog)
@@ -11,10 +11,22 @@ void Actor::update(float elapsedTime)
     }
     if (updateType == Explicit)
     {
-        explicitUpdate(elapsedTime);
+        return explicitUpdate(elapsedTime);
     }
     else
     {
-        implicitUpdate(elapsedTime);
+        return implicitUpdate(elapsedTime);
     }
+}
+
+void Actor::addForce(float dx, float dy)
+{
+    addForce(QVector2D(dx,dy));
+}
+
+bool Actor::checkCollision(const Actor &other, Intersection &inter) const
+{
+    if (collider.data() && other.collider.data())
+        return collider->checkCollision(*other.collider, inter);
+    return false;
 }

@@ -7,13 +7,16 @@ Particle::Particle()
     : Particle(QPointF(0,0))
 {}
 
-Particle::Particle(float x, float y, float size, const QColor &color)
-    : Particle(QPointF(x, y), size, color)
+Particle::Particle(float x, float y, float size, const QColor &color, float elasticity)
+    : Particle(QPointF(x, y), size, color, elasticity)
 {}
 
-Particle::Particle(const QPointF &pos, float size, const QColor &color)
-    :  MovableActor(pos), size(size), color(color)
-{}
+Particle::Particle(const QPointF &pos, float size, const QColor &color, float elasticity)
+    :  MovableActor(pos), size(size), elasticity(elasticity), color(color)
+{
+    collider = QSharedPointer<Collider>(new CircleCollider(this->pos, size));
+
+}
 
 void Particle::draw(bool debug) const
 {
@@ -36,5 +39,12 @@ void Particle::draw(bool debug) const
     }
 }
 
-void Particle::collision(Actor &other) const
-{}
+void Particle::collision(Actor &other, const QVector2D &normal)
+{
+    MovableActor* mActor = dynamic_cast<MovableActor*>(&other);
+
+    if (mActor)
+        other.addForce(normal * abs(QVector2D::dotProduct(mActor->getNextSpeed(), normal)) * elasticity);
+    addForce(-normal * abs(QVector2D::dotProduct(getSpeed(), normal)) * (elasticity-1.f) * 0.5f);
+
+}

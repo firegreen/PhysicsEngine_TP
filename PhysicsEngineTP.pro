@@ -23,7 +23,8 @@ SOURCES += main.cpp \
     movableactor.cpp \
     fixedactor.cpp \
     actor.cpp \
-    collider.cpp
+    collider.cpp \
+    spring.cpp
 
 HEADERS += \
     glwidget.h \
@@ -32,4 +33,5 @@ HEADERS += \
     actor.h \
     movableactor.h \
     fixedactor.h \
-    collider.h
+    collider.h \
+    spring.h

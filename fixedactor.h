@@ -10,10 +10,13 @@ public:
 
     // Actor interface
 public:
-    void explicitUpdate(float elapsedTime) override;
     void addForce(const QVector2D &force) override;
     void addConstantAcceleration(const QVector2D &force) override;
-    void implicitUpdate(float elapsedTime) override;
+    bool implicitUpdate(float elapsedTime) override;
+    bool explicitUpdate(float elapsedTime) override;
+
+protected:
+    //QPointF pos;
 };
 
 #endif // FIXEDACTORS_H

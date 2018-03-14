@@ -2,6 +2,14 @@
 #define COLLIDER_H
 
 #include <QPointF>
+#include <QVector2D>
+
+struct Intersection
+{
+    QPointF point;
+    QVector2D normal1;
+    QVector2D normal2;
+};
 
 class Collider
 {
@@ -16,7 +24,7 @@ public:
     Collider(Type type) : type(type) {}
     virtual ~Collider() {}
 
-    virtual bool checkCollision(const Collider& other) const = 0;
+    virtual bool checkCollision(const Collider& other, Intersection& i) const = 0;
 
     const Type type;
 };
@@ -31,7 +39,7 @@ public:
 
     // Collider interface
 public:
-    bool checkCollision(const Collider &other) const;
+    bool checkCollision(const Collider &other, Intersection& i) const;
 };
 
 class LineCollider : public Collider
@@ -44,7 +52,7 @@ public:
 
 // Collider interface
 public:
-    bool checkCollision(const Collider &other) const;
+    bool checkCollision(const Collider &other, Intersection& i) const;
 };
 
 

@@ -3,8 +3,11 @@
 
 #include <QVector2D>
 #include <QPointF>
+#include <QSharedPointer>
 
 #include "collider.h"
+
+class Spring;
 
 class Actor
 {
@@ -25,18 +28,20 @@ public:
      * @brief update
      * @param elapsedTime elapsed time in seconds
      */
-    void update(float elapsedTime);
-    virtual void explicitUpdate(float elapsedTime) = 0;
-    virtual void implicitUpdate(float elapsedTime) = 0;
+    bool update(float elapsedTime);
+    virtual bool explicitUpdate(float elapsedTime) = 0;
+    virtual bool implicitUpdate(float elapsedTime) = 0;
     virtual void addForce(const QVector2D& force) = 0;
+    void addForce(float dx, float dy);
     virtual void addConstantAcceleration(const QVector2D &force) = 0;
-    void checkCollision(const Actor& other) const;
-    virtual void collision(Actor& other) const = 0;
+    bool checkCollision(const Actor& other, Intersection& inter) const;
+    virtual void collision(Actor& other, const QVector2D& normal) = 0;
+    //virtual Spring* springForce(Actor& other, const QVector2D& normal);
 
     UpdateType updateType = Explicit;
 
     static int frame;
-    Collider* collider;
+    QSharedPointer<Collider> collider;
 };
 
 #endif // ACTOR_H

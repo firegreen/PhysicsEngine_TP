@@ -1,12 +1,15 @@
 #include <QEvent>
+#include <iostream>
 
 #include "glwidget.h"
 #include "GL/glu.h"
+#include "spring.h"
+#include "edge.h"
 
-GLWidget::GLWidget(QWidget *parent, char *name, int framesPerSecond)
-    : QGLWidget(parent), gravity(0,-91)
+GLWidget::GLWidget(QWidget *parent, std::string name, int framesPerSecond)
+    : QGLWidget(parent), gravity(0,-91), stop(false), debug(false)
 {
-    setWindowTitle(QString::fromUtf8(name));
+    setWindowTitle(QString::fromStdString(name));
     if(framesPerSecond == 0)
         t_Timer = NULL;
     else
@@ -48,17 +51,34 @@ void GLWidget::keyPressEvent(QKeyEvent *keyEvent)
 {
     switch(keyEvent->key())
     {
+    case Qt::Key_D:
+        toogleDebug();
+        break;
     case Qt::Key_Escape:
         close();
         break;
+    case Qt::Key_Plus:
+        gravity.setY(gravity.y() + 2);
+        break;
+    case Qt::Key_Minus:
+        gravity.setY(gravity.y() - 2);
+        break;
+    case Qt::Key_Space:
+        tooglePause();
+        break;
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
+        addRandomParticule();
+        break;
     }
+    QGLWidget::keyPressEvent(keyEvent);
 }
 
 void GLWidget::mouseReleaseEvent(QMouseEvent *mouseEvent)
 {
     if (mouseEvent->button() == Qt::MouseButton::LeftButton)
         for (QSharedPointer<Actor>& p : actors)
-            p->addForce(QVector2D(50,200));
+            p->addForce(QVector2D(qrand() % 100 - 50, qrand() % 200 - 50));
     QGLWidget::mouseReleaseEvent(mouseEvent);
 }
 
@@ -75,25 +95,84 @@ void GLWidget::paintGL()
     glColor3f(0.2,0.7,0.4);
 
     for(const QSharedPointer<Actor>& a : actors)
-        a->draw(true);
+        a->draw(debug);
+    for(const QSharedPointer<Spring>& s : springs)
+        s->draw(debug);
 }
 
 void GLWidget::update()
 {
-    float elapsedS = (float) elapsedTime.restart()  / 1000.f;
-
-    // process forces
-    /*for(Particule& p : particules)
+    if (!stop)
     {
-        p.addForce(gravity * elapsedS);
-    }*/
+        if (!elapsedTime.isValid())
+            elapsedTime.restart();
+        const float elapsedS = timeCoef * (float) elapsedTime.restart()  / 1000.f;
 
-    // update position
-    for (QSharedPointer<Actor>& a : actors)
-        a->update(elapsedS * timeCoef);
+        // process forces
+        Intersection intersection;
+        for(QList<QSharedPointer<Actor>>::iterator i = actors.begin(); i != actors.end(); ++i)
+        {
+            for (QList<QSharedPointer<Actor>>::iterator j = i+1; j != actors.end(); ++j)
+            {
+                if ((*i)->checkCollision(*(*j), intersection))
+                {
+                    //other.addForce(normal * abs(QVector2D::dotProduct(mActor->getNextSpeed(), normal)) * elasticity);
+                    //Spring* spring = new Spring(*(*j), *(*i));
+                    (*i)->collision(*(*j), intersection.normal2);
+                    (*j)->collision(*(*i), intersection.normal1);
+                }
+            }
+        }
 
-    ++Actor::frame;
+        for(QMutableListIterator<QSharedPointer<Actor>> i(actors); i.hasNext();)
+        {
+            if (!i.next()->update(elapsedS))
+                i.remove();
+        }
+
+        for(QMutableListIterator<QSharedPointer<Spring>> i(springs); i.hasNext();)
+        {
+            if (!i.next()->update(elapsedS))
+                i.remove();
+        }
+
+        ++Actor::frame;
+    }
+    else
+        elapsedTime.invalidate();
     updateGL();
+}
+
+
+
+Particle& GLWidget::addRandomParticule()
+{
+    QColor c(qrand() % 170+50, qrand() % 200+50, qrand() % 40 + 70);
+    Particle* p = new Particle(qrand() % 200-100,qrand() % 200-70, qrand() % 10 + 3, c);
+    p->addForce(QVector2D(qrand() % 100 - 50,qrand() % 100 - 50));
+    if (actors.length() && qrand() % 3 == 0)
+    {
+        Actor* a2 = actors.at(qrand() % actors.length()).data();
+        MovableActor* ma2 = dynamic_cast<MovableActor*>(a2);
+        if (ma2)
+        {
+            Spring* s = new Spring(*p, *a2, p->getPosition(), ma2->getPosition(),
+                                   (float)(qrand()%10)*0.5f);
+            addSpring(*s);
+        }
+        else
+        {
+            Edge* e2 = dynamic_cast<Edge*>(a2);
+            if (e2)
+            {
+                Spring* s = new Spring(*p, *a2, p->getPosition(),
+                                       e2->getLine().pointAt(std::min(1.0f, (float)(qrand()%100)*0.01f)));
+                addSpring(*s);
+            }
+        }
+
+    }
+    return addParticule(*p);
 }
 
 Particle& GLWidget::addParticule(Particle &p)
@@ -110,6 +189,22 @@ Actor &GLWidget::addActor(Actor &p)
     Actor* last = actors.last().data();
     last->addConstantAcceleration(gravity);
     return *last;
+}
+
+Spring &GLWidget::addSpring(Spring &s)
+{
+    springs.append(QSharedPointer<Spring>(&s));
+    return *springs.last();
+}
+
+void GLWidget::tooglePause()
+{
+    stop = !stop;
+}
+
+void GLWidget::toogleDebug()
+{
+    debug = !debug;
 }
 
 void GLWidget::drawEllipse(float x, float y, float radius, int res)
