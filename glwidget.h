@@ -25,7 +25,7 @@ public:
     void mouseReleaseEvent( QMouseEvent* mouseEvent) override;
     void wheelEvent(QWheelEvent* event) override;
 
-    Particle &addRandomParticule();
+    Particle &addRandomParticule(QPointF pos = QPointF(), QVector2D force = QVector2D());
     Particle& addParticule(Particle& p);
     Actor& addActor(Actor &p);
     Link& addLink(Link &s);
@@ -50,6 +50,14 @@ public:
     bool linkWithWall;
     bool stop;
     bool debug;
+
+    bool emitter;
+    QPointF emitterPos;
+    QVector2D emitterForce;
+    int emitterFreq;
+    int emitterGenCount;
+
+    float glueCoef;
 
 private:
     void lock();

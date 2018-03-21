@@ -8,7 +8,6 @@ QT       += core opengl gui
 
 TARGET = PhysicsEngineTP
 CONFIG   += console
-CONFIG   -= app_bundle
 
 QMAKE_CXXFLAGS += -std=c++11
 
@@ -24,7 +23,8 @@ SOURCES += main.cpp \
     fixedactor.cpp \
     actor.cpp \
     collider.cpp \
-    spring.cpp
+    link.cpp \
+    mainwindow.cpp
 
 HEADERS += \
     glwidget.h \
@@ -34,4 +34,8 @@ HEADERS += \
     movableactor.h \
     fixedactor.h \
     collider.h \
-    spring.h
+    link.h \
+    mainwindow.h
+
+FORMS += \
+    mainwindow.ui

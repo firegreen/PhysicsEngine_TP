@@ -3,6 +3,8 @@
 #include "movableactor.h"
 #include "GL/glu.h"
 
+#include <iostream>
+
 Link::Link(QSharedPointer<Actor> a1, QSharedPointer<Actor> a2, const QPointF &p1, const QPointF &p2,
                float k, float l, float resistance, bool active, bool display)
     : a1(a1), a2(a2), p1(p1), p2(p2), k(k), l0(l), resistance(resistance), active(active), display(display)
@@ -29,6 +31,7 @@ void Link::updatePositions()
 
 void Link::draw(bool) const
 {
+
     if (display && !p1.isNull() && !p2.isNull())
     {
         glBegin(GL_LINES);
@@ -69,6 +72,10 @@ bool Link::update(float elapsedTime)
             display = false;
         }
     }
+    if (std::abs(l0) < 0.001f)
+    {
+        active = false;
+    }
     if (active && !p1.isNull() && !p2.isNull())
     {
         MovableActor* actor = dynamic_cast<MovableActor*>(a1.data());
@@ -92,8 +99,8 @@ bool Link::update(float elapsedTime)
         float diff = l0 - l;
 
         QVector2D force(vector.dx() / l, vector.dy() / l);
-        a1.data()->addForce(force * -diff * elapsedTime/k);
-        a2.data()->addForce(force * diff * elapsedTime/k);
+        a1.data()->addForce(0.8 * force * -diff * elapsedTime/k);
+        a2.data()->addForce(0.8 * force * diff * elapsedTime/k);
 
         if (-diff / l0 > resistance)
         {

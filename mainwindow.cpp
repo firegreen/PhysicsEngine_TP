@@ -28,6 +28,7 @@ MainWindow::MainWindow(QWidget *parent) :
     widget->addActor(*e6);
     widget->addActor(*e7);
 
+    ui->view->setGlue(ui->glueSlider->value()/100.f);
     widget->resetMovableActors(50);
 }
 
@@ -78,4 +79,19 @@ void MainWindow::on_massGenBtn_clicked()
     }
     ui->view->setGlue(ui->glueSlider->value()/100.f);
     ui->view->setElasticity(ui->elasticitySlider->value()/100.f);
+}
+
+void MainWindow::on_emitterBtn_toggled(bool checked)
+{
+    ui->view->emitter = checked;
+}
+
+void MainWindow::on_freqSlider_valueChanged(int value)
+{
+    ui->view->emitterFreq = value;
+}
+
+void MainWindow::on_genCount_valueChanged(int value)
+{
+    ui->view->emitterGenCount = value;
 }

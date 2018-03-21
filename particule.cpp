@@ -1,6 +1,8 @@
 #include "particule.h"
 #include "glwidget.h"
 
+#include <iostream>
+
 int Particle::pathResolution = 50;
 
 Particle::Particle()
@@ -24,7 +26,7 @@ Particle::Particle(const QPointF &pos, float size, const QColor &color, float el
 void Particle::draw(bool debug) const
 {
     glColor3ub(color.red(), color.green(), color.blue());
-    GLWidget::drawEllipse(pos.x(), pos.y(), size, size*10);
+    GLWidget::drawEllipse(pos.x(), pos.y(), size, size*5);
 
     if (debug)
     {

@@ -1,4 +1,5 @@
 #include "movableactor.h"
+#include <iostream>
 
 MovableActor::MovableActor(float viscosity)
     : MovableActor(QPointF(), viscosity)
@@ -12,6 +13,14 @@ const float _epsilon = 0.001f;
 
 bool MovableActor::explicitUpdate(float elapsedTime)
 {
+    if (pos.x() < -400.f || pos.x() > 400.f)
+    {
+        return false;
+    }
+    else if (pos.y() < -400.f || pos.y() > 400.f)
+    {
+        return false;
+    }
     if (acc.lengthSquared() < _epsilon)
         acc = QVector2D(0,0);
     if (cachedAcc.lengthSquared() < _epsilon)

@@ -17,7 +17,7 @@ Edge::Edge(const QPointF &p1, const QPointF &p2, bool wall, const QColor &color,
         collider = QSharedPointer<Collider>(new WallCollider(this->p1, this->p2));
     else
         collider = QSharedPointer<Collider>(new LineCollider(this->p1, this->p2));
-    hardness = 3.0f;
+    hardness = 5.0f;
 }
 
 void Edge::draw(bool debug) const

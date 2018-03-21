@@ -7,8 +7,10 @@
 #include "edge.h"
 
 GLWidget::GLWidget(QWidget *parent, int framesPerSecond)
-    : QGLWidget(parent), gravity(0,-91), stop(false), debug(false), _lock(false),
-      linkWithWall(false), linkedParticules(false), wallLink1(nullptr), wallLink2(nullptr)
+    : QGLWidget(parent), linkedParticules(false), linkWithWall(false), stop(false), debug(false),
+       emitter(false), emitterPos(100,300), emitterForce(-140,0), emitterFreq(80), emitterGenCount(3), gravity(0,-91),
+      _lock(false), wallLink1(nullptr), wallLink2(nullptr)
+
 {
     if(framesPerSecond == 0)
         t_Timer = NULL;
@@ -136,6 +138,14 @@ void GLWidget::update()
             if (!i.next()->update(elapsedS))
                 i.remove();
         }
+        int freq = std::max(1, std::min(10,(100-emitterFreq)/10));
+        if (actors.length() < 700 && emitter && emitterFreq < 100 && Actor::frame%freq==0)
+        {
+            for (int i=0; i< emitterGenCount; ++i)
+            {
+                addRandomParticule(emitterPos + QPointF(qrand() % 20 - 10, qrand() % 20 - 10), emitterForce);
+            }
+        }
         unlock();
 
         ++Actor::frame;
@@ -168,11 +178,12 @@ void GLWidget::unlock()
 
 void GLWidget::setGlue(float value)
 {
+    glueCoef = value;
     for(QSharedPointer<Actor>& a : actors)
     {
         if (MovableActor* ma = dynamic_cast<MovableActor*>(a.data()))
         {
-            ma->glueCoef = value;
+            ma->glueCoef = glueCoef;
         }
     }
 }
@@ -215,11 +226,16 @@ void GLWidget::resetMovableActors(int newParticulesCount)
     unlock();
 }
 
-Particle& GLWidget::addRandomParticule()
+Particle& GLWidget::addRandomParticule(QPointF pos, QVector2D force)
 {
-    QColor c(qrand() % 170+50, qrand() % 200+50, qrand() % 40 + 70);
-    Particle* p = new Particle(qrand() % 400-250,qrand() % 120+250, qrand() % 10 + 3, c);
-    p->addForce(QVector2D(qrand() % 100 - 50,qrand() % 10 - 5));
+    QColor c(qrand() % 20+20, qrand() % 200+50, qrand() % 70 + 170);
+    if (pos.isNull())
+    {
+        pos.setX(qrand() % 400-250);
+        pos.setY(qrand() % 120+250);
+    }
+    Particle* p = new Particle(pos.x(), pos.y(), qrand() % 7 + 4, c);
+    p->addForce(QVector2D(force.x() + qrand() % 20 - 10, force.y() + qrand() % 20 - 10));
     Particle& newP = addParticule(*p);
 
     if (linkWithWall)
@@ -268,7 +284,7 @@ Particle& GLWidget::addRandomParticule()
             addLink(*link);
         }
     }
-
+    newP.glueCoef = glueCoef;
     return newP;
 }
 

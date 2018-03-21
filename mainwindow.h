@@ -30,6 +30,12 @@ private slots:
 
     void on_massGenBtn_clicked();
 
+    void on_emitterBtn_toggled(bool checked);
+
+    void on_freqSlider_valueChanged(int value);
+
+    void on_genCount_valueChanged(int arg1);
+
 private:
     Ui::MainWindow *ui;
 };
