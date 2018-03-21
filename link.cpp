@@ -99,8 +99,8 @@ bool Link::update(float elapsedTime)
         float diff = l0 - l;
 
         QVector2D force(vector.dx() / l, vector.dy() / l);
-        a1.data()->addForce(0.8 * force * -diff * elapsedTime/k);
-        a2.data()->addForce(0.8 * force * diff * elapsedTime/k);
+        a1.data()->addForce(force * -diff * elapsedTime/k);
+        a2.data()->addForce(force * diff * elapsedTime/k);
 
         if (-diff / l0 > resistance)
         {
