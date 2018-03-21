@@ -26,12 +26,22 @@ bool CircleCollider::checkCollision(const Collider &other, Intersection &i) cons
 
         float radiusSum = radius + circle.radius;
         if(distanceX*distanceX+distanceY*distanceY<radiusSum*radiusSum){
-            i.normal1 = QVector2D(distanceX,distanceY);
-            i.normal1.normalize();
-            i.normal2 = i.normal1 * -1.f;
+            i.normal2 = QVector2D(distanceX,distanceY);
+            i.normal2.normalize();
+            i.normal1 = i.normal1 * -1.f;
             i.point = C2 + i.normal1.toPointF() * circle.radius;
             return true;
         }
+    }
+    if (other.type == Wall)
+    {
+        const WallCollider& wall = reinterpret_cast<const WallCollider&>(other);
+        QPointF D = wall.line.p2 - wall.line.p1;
+        QPointF T = center - wall.line.p1;
+        float d = D.x() * T.y() - D.y() * T.x();
+        if (d > 0)
+            return true;
+        return false;
     }
     if(other.type == Line)
     {
@@ -151,4 +161,21 @@ bool LineCollider::checkCollision(const Collider &other, Intersection &i) const
         }
     }
     return false;
+}
+
+
+bool WallCollider::checkCollision(const Collider &other, Intersection &i) const
+{
+    if (other.type == Circle)
+    {
+        const CircleCollider& circle = reinterpret_cast<const CircleCollider&>(other);
+        QPointF D = line.p2 - line.p1;
+        QPointF T = circle.center - line.p1;
+        float d = D.x() * T.y() - D.y() * T.x();
+        if (d > 0)
+            return true;
+        return false;
+    }
+    else
+        return line.checkCollision(other, i);
 }

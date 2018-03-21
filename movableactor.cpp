@@ -56,6 +56,11 @@ void MovableActor::addConstantAcceleration(const QVector2D &force)
     this->acc += force;
 }
 
+const QPointF MovableActor::getAnchorPoint(QPointF &) const
+{
+    return pos;
+}
+
 float MovableActor::x() const
 {
     return pos.x();

@@ -5,14 +5,19 @@
 #include "movableactor.h"
 #include "GL/glu.h"
 
-Edge::Edge(const QPointF &p1, const QPointF &p2, const QColor &color, const float elasticity, const float viscosity)
+Edge::Edge(const QPointF &p1, const QPointF &p2, bool wall, const QColor &color,
+           const float elasticity, const float viscosity)
     : p1(p1), p2(p2), color(color), elasticity(elasticity), viscosity(viscosity)
 {
     QLineF vector(p1, p2);
     tangent = QVector2D(vector.dx(), vector.dy()).normalized();
     vector = vector.normalVector();
     normal = -QVector2D(vector.dx(), vector.dy()).normalized();
-    collider = QSharedPointer<Collider>(new LineCollider(this->p1, this->p2));
+    if (wall)
+        collider = QSharedPointer<Collider>(new WallCollider(this->p1, this->p2));
+    else
+        collider = QSharedPointer<Collider>(new LineCollider(this->p1, this->p2));
+    hardness = 3.0f;
 }
 
 void Edge::draw(bool debug) const
@@ -50,7 +55,24 @@ void Edge::collision(Actor& other, const QVector2D&)
     }
 }
 
+const QPointF Edge::getAnchorPoint(QPointF& point) const
+{
+    QVector2D segToPoint(point-p1);
+    float distToPoint = QVector2D::dotProduct(segToPoint, normal);
+    return point - normal.toPointF() * (1000.f+distToPoint);
+}
+
 QLineF Edge::getLine() const
 {
     return QLineF(p1, p2);
+}
+
+const QPointF &Edge::point1() const
+{
+    return p1;
+}
+
+const QPointF &Edge::point2() const
+{
+    return p2;
 }

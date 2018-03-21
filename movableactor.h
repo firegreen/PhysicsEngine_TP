@@ -23,6 +23,7 @@ public:
     bool implicitUpdate(float elapsedTime) override;
     void addForce(const QVector2D &force) override;
     void addConstantAcceleration(const QVector2D &force) override;
+    const QPointF getAnchorPoint(QPointF&) const override;
 
     float x() const;
     float y() const;

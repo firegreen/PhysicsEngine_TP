@@ -7,7 +7,7 @@
 
 #include "collider.h"
 
-class Spring;
+class Link;
 
 class Actor
 {
@@ -20,7 +20,7 @@ public:
         UpdateTypeCount
     };
 
-    Actor() {}
+    Actor() : elasticity(.05f), glueCoef(0), hardness(0.5) {}
     virtual ~Actor() {}
 
     virtual void draw(bool debug=false) const = 0;
@@ -36,9 +36,14 @@ public:
     virtual void addConstantAcceleration(const QVector2D &force) = 0;
     bool checkCollision(const Actor& other, Intersection& inter) const;
     virtual void collision(Actor& other, const QVector2D& normal) = 0;
-    //virtual Spring* springForce(Actor& other, const QVector2D& normal);
+    virtual const QPointF getAnchorPoint(QPointF& point) const = 0;
+    //virtual Link* springForce(Actor& other, const QVector2D& normal);
 
     UpdateType updateType = Explicit;
+
+    float elasticity;
+    float glueCoef;
+    float hardness;
 
     static int frame;
     QSharedPointer<Collider> collider;

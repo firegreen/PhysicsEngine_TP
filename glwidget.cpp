@@ -3,13 +3,13 @@
 
 #include "glwidget.h"
 #include "GL/glu.h"
-#include "spring.h"
+#include "link.h"
 #include "edge.h"
 
-GLWidget::GLWidget(QWidget *parent, std::string name, int framesPerSecond)
-    : QGLWidget(parent), gravity(0,-91), stop(false), debug(false)
+GLWidget::GLWidget(QWidget *parent, int framesPerSecond)
+    : QGLWidget(parent), gravity(0,-91), stop(false), debug(false), _lock(false),
+      linkWithWall(false), linkedParticules(false), wallLink1(nullptr), wallLink2(nullptr)
 {
-    setWindowTitle(QString::fromStdString(name));
     if(framesPerSecond == 0)
         t_Timer = NULL;
     else
@@ -20,6 +20,11 @@ GLWidget::GLWidget(QWidget *parent, std::string name, int framesPerSecond)
         t_Timer->start( timerInterval );
     }
     elapsedTime.start();
+}
+
+GLWidget::~GLWidget()
+{
+    resetMovableActors();
 }
 
 //const GLfloat twicePi = 2.0f * PI;
@@ -94,10 +99,16 @@ void GLWidget::paintGL()
     glLoadIdentity();
     glColor3f(0.2,0.7,0.4);
 
+    lock();
+    if (wallLink1)
+        wallLink1->draw(debug);
+    if (wallLink2)
+        wallLink2->draw(debug);
     for(const QSharedPointer<Actor>& a : actors)
         a->draw(debug);
-    for(const QSharedPointer<Spring>& s : springs)
+    for(const QSharedPointer<Link>& s : links)
         s->draw(debug);
+    unlock();
 }
 
 void GLWidget::update()
@@ -108,20 +119,16 @@ void GLWidget::update()
             elapsedTime.restart();
         const float elapsedS = timeCoef * (float) elapsedTime.restart()  / 1000.f;
 
-        // process forces
-        Intersection intersection;
-        for(QList<QSharedPointer<Actor>>::iterator i = actors.begin(); i != actors.end(); ++i)
+        lock();
+
+        if (wallLink1)
+            wallLink1->update(elapsedS);
+        if (wallLink2)
+            wallLink2->update(elapsedS);
+        for(QMutableListIterator<QSharedPointer<Link>> i(links); i.hasNext();)
         {
-            for (QList<QSharedPointer<Actor>>::iterator j = i+1; j != actors.end(); ++j)
-            {
-                if ((*i)->checkCollision(*(*j), intersection))
-                {
-                    //other.addForce(normal * abs(QVector2D::dotProduct(mActor->getNextSpeed(), normal)) * elasticity);
-                    //Spring* spring = new Spring(*(*j), *(*i));
-                    (*i)->collision(*(*j), intersection.normal2);
-                    (*j)->collision(*(*i), intersection.normal1);
-                }
-            }
+            if (!i.next()->update(elapsedS))
+                i.remove();
         }
 
         for(QMutableListIterator<QSharedPointer<Actor>> i(actors); i.hasNext();)
@@ -129,12 +136,7 @@ void GLWidget::update()
             if (!i.next()->update(elapsedS))
                 i.remove();
         }
-
-        for(QMutableListIterator<QSharedPointer<Spring>> i(springs); i.hasNext();)
-        {
-            if (!i.next()->update(elapsedS))
-                i.remove();
-        }
+        unlock();
 
         ++Actor::frame;
     }
@@ -143,58 +145,157 @@ void GLWidget::update()
     updateGL();
 }
 
+class SleeperThread : public QThread
+{
+    public:
+    static void usleep(unsigned long msecs)
+    {
+        QThread::usleep(msecs);
+    }
+};
 
+void GLWidget::lock()
+{
+    while (_lock)
+        SleeperThread::usleep(60);
+    _lock = true;
+}
+
+void GLWidget::unlock()
+{
+    _lock = false;
+}
+
+void GLWidget::setGlue(float value)
+{
+    for(QSharedPointer<Actor>& a : actors)
+    {
+        if (MovableActor* ma = dynamic_cast<MovableActor*>(a.data()))
+        {
+            ma->glueCoef = value;
+        }
+    }
+}
+
+void GLWidget::setElasticity(float value)
+{
+    for(QSharedPointer<Actor>& a : actors)
+    {
+        if (MovableActor* ma = dynamic_cast<MovableActor*>(a.data()))
+        {
+            ma->elasticity = value;
+        }
+    }
+}
+
+void GLWidget::resetMovableActors(int newParticulesCount)
+{
+    lock();
+    if (wallLink1)
+    {
+        delete wallLink1;
+        wallLink1 = nullptr;
+    }
+    if (wallLink2)
+    {
+        delete wallLink2;
+        wallLink2 = nullptr;
+    }
+    for(QMutableListIterator<QSharedPointer<Actor>> i(actors); i.hasNext();)
+    {
+        if (dynamic_cast<MovableActor*>(i.next().data()))
+        {
+            i.remove();
+        }
+    }
+    for (int i=0; i < newParticulesCount; ++i)
+    {
+        addRandomParticule();
+    }
+    unlock();
+}
 
 Particle& GLWidget::addRandomParticule()
 {
     QColor c(qrand() % 170+50, qrand() % 200+50, qrand() % 40 + 70);
-    Particle* p = new Particle(qrand() % 200-100,qrand() % 200-70, qrand() % 10 + 3, c);
-    p->addForce(QVector2D(qrand() % 100 - 50,qrand() % 100 - 50));
-    if (actors.length() && qrand() % 3 == 0)
+    Particle* p = new Particle(qrand() % 400-250,qrand() % 120+250, qrand() % 10 + 3, c);
+    p->addForce(QVector2D(qrand() % 100 - 50,qrand() % 10 - 5));
+    Particle& newP = addParticule(*p);
+
+    if (linkWithWall)
     {
-        Actor* a2 = actors.at(qrand() % actors.length()).data();
-        MovableActor* ma2 = dynamic_cast<MovableActor*>(a2);
-        if (ma2)
+        if (!wallLink1)
         {
-            Spring* s = new Spring(*p, *a2, p->getPosition(), ma2->getPosition(),
-                                   (float)(qrand()%10)*0.5f);
-            addSpring(*s);
-        }
-        else
-        {
-            Edge* e2 = dynamic_cast<Edge*>(a2);
-            if (e2)
+            for(QSharedPointer<Actor>& a : actors)
             {
-                Spring* s = new Spring(*p, *a2, p->getPosition(),
-                                       e2->getLine().pointAt(std::min(1.0f, (float)(qrand()%100)*0.01f)));
-                addSpring(*s);
+                Edge* e = dynamic_cast<Edge*>(a.data());
+                if (e && qrand() % 3 == 0)
+                {
+                    wallLink1 = new HardLink(actors.last(), a, p->getPosition(),
+                                           e->getLine().pointAt(std::min(1.0f, (float)(qrand()%100)*0.01f)),
+                                            0.2f+(float)(qrand()%70)*0.05, 10, 30+(float)(qrand()%200)*0.05f);
+                    break;
+                }
             }
         }
 
+        if (wallLink2)
+        {
+            delete wallLink2;
+            wallLink2 = nullptr;
+        }
+        for(QSharedPointer<Actor>& a : actors)
+        {
+            Edge* e = dynamic_cast<Edge*>(a.data());
+            if (e && qrand() % 3 == 0)
+            {
+                wallLink2 = new HardLink(actors.last(), a, p->getPosition(),
+                                         e->getLine().pointAt(std::min(1.0f, (float)(qrand()%100)*0.01f)),
+                                         0.2f+(float)(qrand()%70)*0.05f, 10, 35+(float)(qrand()%200)*0.05f);
+                break;
+            }
+        }
     }
-    return addParticule(*p);
+
+    if (linkedParticules && actors.length()>1)
+    {
+        QList<QSharedPointer<Actor> >::iterator last = actors.end();
+        last--; last--;
+        if (MovableActor* ma = dynamic_cast<MovableActor*>(last->data()))
+        {
+            HardLink* link = new HardLink(actors.last(), *last, p->getPosition(),
+                                          ma->getPosition(),0.7f+(float)(qrand()%30)*0.05f,10,35+(float)(qrand()%100)*0.05f);
+            addLink(*link);
+        }
+    }
+
+    return newP;
 }
 
 Particle& GLWidget::addParticule(Particle &p)
 {
-    actors.append(QSharedPointer<Actor>(&p));
-    Particle* last = reinterpret_cast<Particle*>(actors.last().data());
-    last->addConstantAcceleration(gravity);
-    return *last;
+    return reinterpret_cast<Particle&>(addActor(p));
 }
 
 Actor &GLWidget::addActor(Actor &p)
 {
-    actors.append(QSharedPointer<Actor>(&p));
+    QSharedPointer<Actor> ptr(&p);
+    for(QList<QSharedPointer<Actor>>::iterator i = actors.begin(); i != actors.end(); ++i)
+    {
+        Link* s = new Link(ptr, *i, 1.5,0,0.7,false,true);
+        addLink(*s);
+    }
+
+    actors.append(ptr);
     Actor* last = actors.last().data();
     last->addConstantAcceleration(gravity);
     return *last;
 }
 
-Spring &GLWidget::addSpring(Spring &s)
+Link &GLWidget::addLink(Link &s)
 {
-    springs.append(QSharedPointer<Spring>(&s));
-    return *springs.last();
+    links.append(QSharedPointer<Link>(&s));
+    return *links.last();
 }
 
 void GLWidget::tooglePause()

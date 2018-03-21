@@ -8,14 +8,16 @@
 
 #include "actor.h"
 #include "particule.h"
-#include "spring.h"
+#include "link.h"
 
 class GLWidget : public QGLWidget
 {
     Q_OBJECT
 public:
 
-    explicit GLWidget(QWidget *parent = 0, std::string name = 0, int framesPerSecond = 30);
+    explicit GLWidget(QWidget *parent = 0, int framesPerSecond = 30);
+    ~GLWidget();
+
     void initializeGL() override;
     void resizeGL(int width, int height) override;
     void paintGL() override;
@@ -26,7 +28,7 @@ public:
     Particle &addRandomParticule();
     Particle& addParticule(Particle& p);
     Actor& addActor(Actor &p);
-    Spring& addSpring(Spring &s);
+    Link& addLink(Link &s);
 
     void tooglePause();
     void toogleDebug();
@@ -36,19 +38,34 @@ public:
 
     float timeCoef = 1.0f;
 
+    void setGlue(float value);
+    void setElasticity(float value);
+    void resetMovableActors(int newParticulesCount=0);
+
 public slots:
     virtual void update();
 
+public:
+    bool linkedParticules;
+    bool linkWithWall;
+    bool stop;
+    bool debug;
+
 private:
+    void lock();
+    void unlock();
+
     QTimer *t_Timer;
     QElapsedTimer elapsedTime;
 
     QVector2D gravity;
 
-    bool stop;
-    bool debug;
+    bool _lock;
 
     QList<QSharedPointer<Actor>> actors;
-    QList<QSharedPointer<Spring>> springs;
+    //QList<QSharedPointer<HardLink>> springs;
+    HardLink* wallLink1;
+    HardLink* wallLink2;
+    QList<QSharedPointer<Link>> links;
 };
 #endif // GLWIDGET_H

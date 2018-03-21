@@ -18,6 +18,7 @@ public:
     {
         Line,
         Circle,
+        Wall,
         TypeCount
     };
 
@@ -50,6 +51,17 @@ public:
     QPointF& p1;
     QPointF& p2;
 
+// Collider interface
+public:
+    bool checkCollision(const Collider &other, Intersection& i) const;
+};
+
+class WallCollider : public Collider
+{
+public:
+    WallCollider(QPointF& p1, QPointF& p2) : Collider(Wall), line(p1, p2)
+        {}
+    LineCollider line;
 // Collider interface
 public:
     bool checkCollision(const Collider &other, Intersection& i) const;
